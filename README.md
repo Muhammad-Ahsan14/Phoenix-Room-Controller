@@ -36,25 +36,25 @@ LED
 
 ## Demo
 
-### 1.PHOENIX Room Controller CLI
+### 1. PHOENIX Room Controller CLI
 
 <p align="center">
   <img src="docs/images/cli-menu.png" width="640" height="400" alt="PHOENIX Room Controller CLI">
 </p>
 
-### 2.ESP32-S3 Network Connection
+### 2. ESP32-S3 Network Connection
 
 <p align="center">
   <img src="docs/images/esp32-serial.png" width="640" height="400" alt="ESP32-S3 Network Connection">
 </p>
 
-### 3.Physical Light Control
+### 3. Physical Light Control
 
 <p align="center">
-  <img src="docs/images/light-on.png" width="550" height="450" alt="PHOENIX Physical Light Control">
+  <img src="docs/images/light-on.png" width="640" height="450" alt="PHOENIX Physical Light Control">
 </p>
 
-### 4.Live Device Status
+### 4. Live Device Status
 
 <p align="center">
   <img src="docs/images/light-status.png" width="640" height="400" alt="PHOENIX Live Device Status">
