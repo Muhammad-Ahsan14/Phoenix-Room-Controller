@@ -51,7 +51,7 @@ LED
 ### 3.Physical Light Control
 
 <p align="center">
-  <img src="docs/images/light-on.png" width="550" height="400" alt="PHOENIX Physical Light Control">
+  <img src="docs/images/light-on.png" width="550" height="450" alt="PHOENIX Physical Light Control">
 </p>
 
 ### 4.Live Device Status
