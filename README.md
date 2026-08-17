@@ -57,7 +57,7 @@ LED
 ### ESP32-S3 Network Connection
 
 <p align="center">
-  <img src="docs/images/esp32-serial.png" width="650">
+  <img src="docs/images/esp32-serial.png" width="560">
 </p>
 
 ## CLI
