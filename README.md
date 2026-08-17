@@ -38,19 +38,27 @@ LED
 
 ### PHOENIX Room Controller CLI
 
-![PHOENIX Room Controller CLI](docs/images/cli-menu.png)
+<p align="center">
+  <img src="docs/images/cli-menu.png" width="650">
+</p>
 
 ### Light Control
 
-![Light ON](docs/images/light-on.png)
+<p align="center">
+  <img src="docs/images/light-on.png" width="650">
+</p>
 
 ### Live Device Status
 
-![Light Status](docs/images/light-status.png)
+<p align="center">
+  <img src="docs/images/light-status.png" width="650">
+</p>
 
 ### ESP32-S3 Network Connection
 
-![ESP32 Serial Monitor](docs/images/esp32-serial.png)
+<p align="center">
+  <img src="docs/images/esp32-serial.png" width="650">
+</p>
 
 ## CLI
 
