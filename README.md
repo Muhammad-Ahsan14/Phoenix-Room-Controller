@@ -34,6 +34,24 @@ LED
 - Wi-Fi credentials excluded from Git
 - Clean CLI workflow
 
+## Demo
+
+### PHOENIX Room Controller CLI
+
+![PHOENIX Room Controller CLI](docs/images/cli-menu.png)
+
+### Light Control
+
+![Light ON](docs/images/light-on.png)
+
+### Live Device Status
+
+![Light Status](docs/images/light-status.png)
+
+### ESP32-S3 Network Connection
+
+![ESP32 Serial Monitor](docs/images/esp32-serial.png)
+
 ## CLI
 
 ```text
