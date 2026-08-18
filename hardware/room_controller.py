@@ -7,7 +7,7 @@ class RoomController:
         self.timeout = 3
 
     def check_connection(self):
-        return self._send_request("/")
+     return self._send_request("/health")
 
     def light_on(self):
         return self._send_request("/light/on")
@@ -29,8 +29,13 @@ class RoomController:
 
             data = response.json()
 
-            if isinstance(data, dict):
-                data["success"] = True
+            if not isinstance(data, dict):
+                return {
+                    "success": False,
+                    "error": "Invalid response received from PHOENIX device."
+                }
+
+            data.setdefault("success", True)
 
             return data
 

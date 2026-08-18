@@ -32,7 +32,7 @@ def load_config():
 
 def show_menu():
     print("================================")
-    print("   PHOENIX ROOM CONTROLLER V1")
+    print("   PHOENIX ROOM CONTROLLER V2")
     print("================================")
     print("1. Light ON")
     print("2. Light OFF")
@@ -57,7 +57,7 @@ def main():
 
     controller = RoomController(esp32_ip)
 
-    print("Starting PHOENIX Room Controller...")
+    print("Starting PHOENIX Room Controller V2...")
     print(f"Connecting to ESP32 at {esp32_ip}...")
 
     connection = controller.check_connection()
@@ -81,6 +81,7 @@ def main():
 
             if result["success"]:
                 print("Light turned ON.")
+                print("Relay State: ON")
             else:
                 print("Error:", result["error"])
 
@@ -92,6 +93,7 @@ def main():
 
             if result["success"]:
                 print("Light turned OFF.")
+                print("Relay State: OFF")
             else:
                 print("Error:", result["error"])
 
@@ -103,6 +105,7 @@ def main():
 
             if result["success"]:
                 print(f"Light Status: {result['light']}")
+                print(f"Relay State: {result['relay']}")
             else:
                 print("Error:", result["error"])
 
@@ -110,7 +113,7 @@ def main():
             clear_screen()
 
         elif choice == "4":
-            print("PHOENIX Room Controller stopped.")
+            print("PHOENIX Room Controller V2 stopped.")
             break
 
         else:
