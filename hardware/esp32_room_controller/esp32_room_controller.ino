@@ -1,16 +1,27 @@
 #include <WiFi.h>
 #include <WebServer.h>
+
 #include "secrets.h"
-
-WebServer server(80);
-
-const int RELAY_PIN = 4;
-
-bool lightState = false;
+#include "device_config.h"
 
 
 // ======================================================
-// WEB PAGE
+// PHOENIX ROOM CONTROLLER V3
+// ======================================================
+
+WebServer server(80);
+
+
+// ======================================================
+// RUNTIME STATE
+// ======================================================
+
+bool commandedLightState = false;
+bool actualLightState = false;
+
+
+// ======================================================
+// WEB UI
 // ======================================================
 
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -20,163 +31,322 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <head>
   <meta charset="UTF-8">
 
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <title>PHOENIX Room Controller</title>
+  <title>PHOENIX Room Controller V3</title>
 
   <style>
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
+
     body {
-      font-family: Arial, Helvetica, sans-serif;
-      background:
-        radial-gradient(circle at top, #172554, #020617 55%);
+
       min-height: 100vh;
+
       display: flex;
+
       align-items: center;
       justify-content: center;
+
       padding: 20px;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
       color: white;
+
+      background:
+        radial-gradient(
+          circle at top,
+          #172554,
+          #020617 55%
+        );
     }
+
 
     .container {
+
       width: 100%;
-      max-width: 480px;
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 24px;
-      padding: 32px 24px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+      max-width: 520px;
+
+      padding: 30px 24px;
+
       text-align: center;
+
+      background:
+        rgba(
+          15,
+          23,
+          42,
+          0.95
+        );
+
+      border:
+        1px solid
+        rgba(
+          148,
+          163,
+          184,
+          0.2
+        );
+
+      border-radius: 24px;
+
+      box-shadow:
+        0 25px 60px
+        rgba(
+          0,
+          0,
+          0,
+          0.45
+        );
     }
+
 
     .logo {
+
       font-size: 34px;
+
       font-weight: 800;
+
       letter-spacing: 2px;
-      margin-bottom: 6px;
     }
+
 
     .subtitle {
+
+      margin-top: 6px;
+      margin-bottom: 26px;
+
       color: #94a3b8;
+
       font-size: 14px;
-      margin-bottom: 28px;
     }
 
-    .device-card {
+
+    .status-grid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          2,
+          1fr
+        );
+
+      gap: 12px;
+
+      margin-bottom: 18px;
+    }
+
+
+    .card {
+
+      padding: 20px 10px;
+
       background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 18px;
-      padding: 22px;
-      margin-bottom: 25px;
+
+      border:
+        1px solid
+        #1e293b;
+
+      border-radius: 16px;
     }
 
-    .device-name {
+
+    .label {
+
+      margin-bottom: 9px;
+
       color: #94a3b8;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 10px;
+
+      font-size: 12px;
+
+      letter-spacing: 1px;
     }
 
-    #status {
-      font-size: 30px;
+
+    .value {
+
+      font-size: 24px;
+
       font-weight: 800;
     }
 
-    .status-on {
+
+    .on {
       color: #22c55e;
     }
 
-    .status-off {
+
+    .off {
       color: #ef4444;
     }
 
-    .status-loading {
+
+    .verified {
+      color: #22c55e;
+    }
+
+
+    .fault {
       color: #f59e0b;
     }
 
-    .buttons {
-      display: grid;
-      gap: 14px;
+
+    #systemStatus {
+
+      margin-top: 6px;
+
+      font-size: 22px;
+
+      font-weight: 800;
     }
+
+
+    #verificationDetail {
+
+      margin-top: 7px;
+      margin-bottom: 22px;
+
+      color: #94a3b8;
+
+      font-size: 13px;
+
+      letter-spacing: 0.6px;
+    }
+
+
+    .buttons {
+
+      display: grid;
+
+      gap: 12px;
+    }
+
 
     button {
+
       width: 100%;
+
+      padding: 16px;
+
       border: none;
+
       border-radius: 14px;
-      padding: 17px;
-      font-size: 17px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: 0.2s;
+
       color: white;
+
+      font-size: 16px;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      transition: 0.2s;
     }
+
 
     button:active {
-      transform: scale(0.97);
+
+      transform:
+        scale(0.97);
     }
 
+
     .on-button {
+
       background: #16a34a;
     }
 
-    .on-button:hover {
-      background: #15803d;
-    }
 
     .off-button {
+
       background: #dc2626;
     }
 
-    .off-button:hover {
-      background: #b91c1c;
-    }
 
     .status-button {
+
       background: #2563eb;
     }
 
-    .status-button:hover {
-      background: #1d4ed8;
+
+    #sensor {
+
+      margin-top: 20px;
+
+      color: #cbd5e1;
+
+      font-size: 14px;
     }
+
 
     #message {
-      min-height: 20px;
+
+      min-height: 18px;
+
+      margin-top: 10px;
+
       color: #94a3b8;
-      font-size: 14px;
-      margin-top: 20px;
+
+      font-size: 13px;
     }
 
+
     .footer {
-      margin-top: 28px;
+
+      margin-top: 25px;
+
       padding-top: 18px;
-      border-top: 1px solid #1e293b;
+
+      border-top:
+        1px solid
+        #1e293b;
+
       color: #64748b;
+
       font-size: 12px;
     }
 
-    @media (max-width: 480px) {
+
+    @media (
+      max-width: 480px
+    ) {
+
       .container {
-        padding: 27px 18px;
-        border-radius: 20px;
+
+        padding:
+          25px 17px;
       }
 
+
       .logo {
+
         font-size: 28px;
       }
 
-      button {
-        padding: 16px;
+
+      .status-grid {
+
+        grid-template-columns:
+          1fr;
       }
     }
+
   </style>
 </head>
+
 
 <body>
 
@@ -186,135 +356,319 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       PHOENIX
     </div>
 
+
     <div class="subtitle">
-      Room Controller V2
+      Room Controller V3 • Verified Automation
     </div>
 
-    <div class="device-card">
 
-      <div class="device-name">
-        Room Light
+    <div class="status-grid">
+
+
+      <div class="card">
+
+        <div class="label">
+          COMMANDED STATE
+        </div>
+
+        <div
+          id="commanded"
+          class="value"
+        >
+          --
+        </div>
+
       </div>
 
-      <div id="status" class="status-loading">
-        CHECKING...
+
+      <div class="card">
+
+        <div class="label">
+          ACTUAL STATE
+        </div>
+
+        <div
+          id="actual"
+          class="value"
+        >
+          --
+        </div>
+
       </div>
+
 
     </div>
+
+
+    <div id="systemStatus">
+      CHECKING...
+    </div>
+
+
+    <div id="verificationDetail">
+      --
+    </div>
+
 
     <div class="buttons">
 
-      <button class="on-button" onclick="lightOn()">
+
+      <button
+        class="on-button"
+        onclick="sendCommand('/light/on')"
+      >
         LIGHT ON
       </button>
 
-      <button class="off-button" onclick="lightOff()">
+
+      <button
+        class="off-button"
+        onclick="sendCommand('/light/off')"
+      >
         LIGHT OFF
       </button>
 
-      <button class="status-button" onclick="getStatus()">
+
+      <button
+        class="status-button"
+        onclick="getStatus()"
+      >
         GET STATUS
       </button>
 
+
     </div>
+
+
+    <div id="sensor">
+      LDR Value: --
+    </div>
+
 
     <div id="message">
-      Connecting to PHOENIX device...
+      Connecting to PHOENIX...
     </div>
 
+
     <div class="footer">
-      PHOENIX AI • Room Automation System
+      PHOENIX AI • Verified Room Automation
     </div>
+
 
   </div>
 
 
   <script>
 
-    const statusElement =
-      document.getElementById("status");
-
-    const messageElement =
-      document.getElementById("message");
-
-
-    function updateDisplay(state) {
-
-      statusElement.textContent = state;
-
-      statusElement.classList.remove(
-        "status-on",
-        "status-off",
-        "status-loading"
+    const commanded =
+      document.getElementById(
+        "commanded"
       );
 
-      if (state === "ON") {
-        statusElement.classList.add("status-on");
-      }
-      else {
-        statusElement.classList.add("status-off");
-      }
+
+    const actual =
+      document.getElementById(
+        "actual"
+      );
+
+
+    const systemStatus =
+      document.getElementById(
+        "systemStatus"
+      );
+
+
+    const verificationDetail =
+      document.getElementById(
+        "verificationDetail"
+      );
+
+
+    const sensor =
+      document.getElementById(
+        "sensor"
+      );
+
+
+    const message =
+      document.getElementById(
+        "message"
+      );
+
+
+    function setStateStyle(
+      element,
+      state
+    ) {
+
+      element.textContent =
+        state;
+
+
+      element.className =
+        "value " +
+        (
+          state === "ON"
+            ? "on"
+            : "off"
+        );
     }
 
 
-    async function sendRequest(endpoint) {
+    function updateDisplay(
+      data
+    ) {
 
-      messageElement.textContent =
-        "Sending command...";
+      setStateStyle(
+        commanded,
+        data.commanded
+      );
+
+
+      setStateStyle(
+        actual,
+        data.actual
+      );
+
+
+      systemStatus.textContent =
+        data.system_status;
+
+
+      systemStatus.className =
+        (
+          data.system_status ===
+          "VERIFIED"
+        )
+          ? "verified"
+          : "fault";
+
+
+      verificationDetail.textContent =
+        data.detail.replaceAll(
+          "_",
+          " "
+        );
+
+
+      sensor.textContent =
+        "LDR Value: " +
+        data.ldr_value;
+    }
+
+
+    async function requestStatus(
+      endpoint
+    ) {
 
       try {
 
         const response =
-          await fetch(endpoint);
+          await fetch(
+            endpoint
+          );
+
 
         const data =
           await response.json();
 
-        if (!response.ok || !data.success) {
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+
           throw new Error(
-            data.error || "Request failed"
+            data.error ||
+            "Request failed"
           );
         }
 
-        updateDisplay(data.light);
 
-        messageElement.textContent =
-          "Command completed successfully.";
+        updateDisplay(
+          data
+        );
 
+
+        return true;
       }
 
-      catch (error) {
 
-        statusElement.textContent =
-          "ERROR";
+      catch (
+        error
+      ) {
 
-        statusElement.className =
-          "status-loading";
+        systemStatus.textContent =
+          "CONNECTION ERROR";
 
-        messageElement.textContent =
-          "Could not communicate with device.";
+
+        systemStatus.className =
+          "fault";
+
+
+        verificationDetail.textContent =
+          "DEVICE UNREACHABLE";
+
+
+        message.textContent =
+          "Could not communicate with PHOENIX device.";
+
+
+        return false;
       }
     }
 
 
-    function lightOn() {
-      sendRequest("/light/on");
+    async function sendCommand(
+      endpoint
+    ) {
+
+      message.textContent =
+        "Sending command...";
+
+
+      const success =
+        await requestStatus(
+          endpoint
+        );
+
+
+      if (
+        success
+      ) {
+
+        message.textContent =
+          "Command completed.";
+      }
     }
 
 
-    function lightOff() {
-      sendRequest("/light/off");
+    async function getStatus() {
+
+      const success =
+        await requestStatus(
+          "/light/status"
+        );
+
+
+      if (
+        success
+      ) {
+
+        message.textContent =
+          "Live monitoring active.";
+      }
     }
 
 
-    function getStatus() {
-      sendRequest("/light/status");
-    }
+    window.onload =
+      getStatus;
 
 
-    // Automatically retrieve current status
-    // when page loads.
-    window.onload = getStatus;
+    setInterval(
+      getStatus,
+      500
+    );
 
   </script>
 
@@ -325,19 +679,265 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
 
 // ======================================================
-// HARDWARE CONTROL
+// LDR SENSOR
 // ======================================================
 
-void setLight(bool state) {
+int readLDR() {
 
-  lightState = state;
+  long total = 0;
 
-  if (lightState) {
-    digitalWrite(RELAY_PIN, HIGH);
+
+  for (
+    int i = 0;
+    i < SENSOR_SAMPLES;
+    i++
+  ) {
+
+    total +=
+      analogRead(
+        LDR_PIN
+      );
+
+
+    delay(
+      SENSOR_SAMPLE_DELAY_MS
+    );
   }
-  else {
-    digitalWrite(RELAY_PIN, LOW);
+
+
+  return
+    total /
+    SENSOR_SAMPLES;
+}
+
+
+// ======================================================
+// ACTUAL LIGHT STATE
+// ======================================================
+
+void updateActualLightState(
+  int ldrValue
+) {
+
+  // Light clearly detected.
+  if (
+    ldrValue >=
+    LIGHT_ON_THRESHOLD
+  ) {
+
+    actualLightState =
+      true;
   }
+
+
+  // Light clearly not detected.
+  else if (
+    ldrValue <=
+    LIGHT_OFF_THRESHOLD
+  ) {
+
+    actualLightState =
+      false;
+  }
+
+
+  // Between thresholds:
+  // preserve previous actual state.
+  // This creates hysteresis and prevents flickering.
+}
+
+
+// ======================================================
+// VERIFICATION ENGINE
+// ======================================================
+
+String getSystemStatus() {
+
+  if (
+    commandedLightState ==
+    actualLightState
+  ) {
+
+    return
+      "VERIFIED";
+  }
+
+
+  return
+    "FAULT";
+}
+
+
+String getVerificationDetail() {
+
+  if (
+    commandedLightState ==
+    actualLightState
+  ) {
+
+    return
+      "STATE_MATCH";
+  }
+
+
+  if (
+    commandedLightState &&
+    !actualLightState
+  ) {
+
+    return
+      "LIGHT_NOT_DETECTED";
+  }
+
+
+  return
+    "UNEXPECTED_LIGHT_DETECTED";
+}
+
+
+// ======================================================
+// LIGHT / RELAY CONTROL
+// ======================================================
+
+void setLight(
+  bool state
+) {
+
+  commandedLightState =
+    state;
+
+
+  // Current hardware architecture:
+  //
+  // ESP32 HIGH
+  // -> BC547 ON
+  // -> relay input pulled LOW
+  // -> relay activated
+
+  digitalWrite(
+    RELAY_PIN,
+    state
+      ? HIGH
+      : LOW
+  );
+
+
+  // Allow relay and load
+  // to physically settle.
+
+  delay(
+    RELAY_SETTLE_DELAY_MS
+  );
+
+
+  int ldrValue =
+    readLDR();
+
+
+  updateActualLightState(
+    ldrValue
+  );
+}
+
+
+// ======================================================
+// JSON STATUS
+// ======================================================
+
+String createStatusResponse() {
+
+  int ldrValue =
+    readLDR();
+
+
+  updateActualLightState(
+    ldrValue
+  );
+
+
+  String commanded =
+    commandedLightState
+      ? "ON"
+      : "OFF";
+
+
+  String actual =
+    actualLightState
+      ? "ON"
+      : "OFF";
+
+
+  String systemStatus =
+    getSystemStatus();
+
+
+  String detail =
+    getVerificationDetail();
+
+
+  String response =
+    "{";
+
+
+  response +=
+    "\"success\":true,";
+
+
+  response +=
+    "\"commanded\":\"";
+
+  response +=
+    commanded;
+
+  response +=
+    "\",";
+
+
+  response +=
+    "\"actual\":\"";
+
+  response +=
+    actual;
+
+  response +=
+    "\",";
+
+
+  response +=
+    "\"system_status\":\"";
+
+  response +=
+    systemStatus;
+
+  response +=
+    "\",";
+
+
+  response +=
+    "\"detail\":\"";
+
+  response +=
+    detail;
+
+  response +=
+    "\",";
+
+
+  response +=
+    "\"ldr_value\":";
+
+  response +=
+    String(
+      ldrValue
+    );
+
+
+  response +=
+    "}";
+
+
+  return
+    response;
 }
 
 
@@ -361,7 +961,7 @@ void handleHealth() {
     200,
     "application/json",
     "{\"success\":true,"
-    "\"device\":\"PHOENIX Room Controller V2\","
+    "\"device\":\"PHOENIX Room Controller V3\","
     "\"status\":\"online\"}"
   );
 }
@@ -369,46 +969,40 @@ void handleHealth() {
 
 void handleLightOn() {
 
-  setLight(true);
+  setLight(
+    true
+  );
+
 
   server.send(
     200,
     "application/json",
-    "{\"success\":true,"
-    "\"light\":\"ON\","
-    "\"relay\":\"ON\"}"
+    createStatusResponse()
   );
 }
 
 
 void handleLightOff() {
 
-  setLight(false);
+  setLight(
+    false
+  );
+
 
   server.send(
     200,
     "application/json",
-    "{\"success\":true,"
-    "\"light\":\"OFF\","
-    "\"relay\":\"OFF\"}"
+    createStatusResponse()
   );
 }
 
 
 void handleLightStatus() {
 
-  String state =
-    lightState ? "ON" : "OFF";
-
-  String response =
-    "{\"success\":true,"
-    "\"light\":\"" + state +
-    "\",\"relay\":\"" + state + "\"}";
-
   server.send(
     200,
     "application/json",
-    response
+    createStatusResponse()
   );
 }
 
@@ -425,7 +1019,7 @@ void handleNotFound() {
 
 
 // ======================================================
-// WI-FI
+// WI-FI CONNECTION
 // ======================================================
 
 void connectToWiFi() {
@@ -434,31 +1028,46 @@ void connectToWiFi() {
     "Connecting to Wi-Fi"
   );
 
-  WiFi.mode(WIFI_STA);
+
+  WiFi.mode(
+    WIFI_STA
+  );
+
 
   WiFi.begin(
     WIFI_SSID,
     WIFI_PASSWORD
   );
 
+
   while (
-    WiFi.status() != WL_CONNECTED
+    WiFi.status() !=
+    WL_CONNECTED
   ) {
 
-    delay(500);
+    delay(
+      500
+    );
 
-    Serial.print(".");
+
+    Serial.print(
+      "."
+    );
   }
 
+
   Serial.println();
+
 
   Serial.println(
     "Wi-Fi connected."
   );
 
+
   Serial.print(
     "IP Address: "
   );
+
 
   Serial.println(
     WiFi.localIP()
@@ -467,7 +1076,7 @@ void connectToWiFi() {
 
 
 // ======================================================
-// ROUTES
+// HTTP ROUTES
 // ======================================================
 
 void setupRoutes() {
@@ -478,11 +1087,13 @@ void setupRoutes() {
     handleHome
   );
 
+
   server.on(
     "/health",
     HTTP_GET,
     handleHealth
   );
+
 
   server.on(
     "/light/on",
@@ -490,17 +1101,20 @@ void setupRoutes() {
     handleLightOn
   );
 
+
   server.on(
     "/light/off",
     HTTP_GET,
     handleLightOff
   );
 
+
   server.on(
     "/light/status",
     HTTP_GET,
     handleLightStatus
   );
+
 
   server.onNotFound(
     handleNotFound
@@ -514,64 +1128,146 @@ void setupRoutes() {
 
 void setup() {
 
-  Serial.begin(115200);
+  Serial.begin(
+    115200
+  );
+
+
+  // ----------------------------------------------------
+  // Relay output
+  // ----------------------------------------------------
 
   pinMode(
     RELAY_PIN,
     OUTPUT
   );
 
-  // Safe startup:
-  // relay and light OFF.
+
+  // ----------------------------------------------------
+  // ADC configuration
+  // ----------------------------------------------------
+
+  analogReadResolution(
+    12
+  );
+
+
+  analogSetPinAttenuation(
+    LDR_PIN,
+    ADC_11db
+  );
+
+
+  // ----------------------------------------------------
+  // Safe startup
+  // ----------------------------------------------------
+
   digitalWrite(
     RELAY_PIN,
     LOW
   );
 
-  lightState = false;
 
-  delay(1000);
+  commandedLightState =
+    false;
+
+
+  delay(
+    500
+  );
+
+
+  // ----------------------------------------------------
+  // Initial sensor state
+  // ----------------------------------------------------
+
+  int initialReading =
+    readLDR();
+
+
+  updateActualLightState(
+    initialReading
+  );
+
+
+  // ----------------------------------------------------
+  // Serial startup information
+  // ----------------------------------------------------
 
   Serial.println();
+
 
   Serial.println(
     "================================"
   );
 
+
   Serial.println(
-    "  PHOENIX ROOM CONTROLLER V2"
+    " PHOENIX ROOM CONTROLLER V3"
   );
+
 
   Serial.println(
     "================================"
   );
 
+
   Serial.println();
+
+
+  Serial.print(
+    "Initial LDR Value: "
+  );
+
+
+  Serial.println(
+    initialReading
+  );
+
+
+  // ----------------------------------------------------
+  // Wi-Fi
+  // ----------------------------------------------------
 
   connectToWiFi();
 
+
+  // ----------------------------------------------------
+  // HTTP server
+  // ----------------------------------------------------
+
   setupRoutes();
+
 
   server.begin();
 
+
   Serial.println();
+
 
   Serial.println(
     "HTTP server started."
   );
 
-  Serial.println(
-    "Web controller ready."
-  );
 
   Serial.println(
-    "Relay controller ready."
+    "Feedback engine ready."
+  );
+
+
+  Serial.println(
+    "Verification engine ready."
+  );
+
+
+  Serial.println(
+    "Web controller ready."
   );
 }
 
 
 // ======================================================
-// LOOP
+// MAIN LOOP
 // ======================================================
 
 void loop() {
